@@ -64,7 +64,7 @@ jobs:
             version=${{ env.version }}
 
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: "${{ env.GHCR_REPO }}:dev-${{ github.run_id }}"
           format: 'sarif'
@@ -205,7 +205,7 @@ jobs:
             $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
 
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: "${{ env.GHCR_REPO }}:${{ env.version }}-build"
           format: 'sarif'
