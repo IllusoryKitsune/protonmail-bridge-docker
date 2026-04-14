@@ -59,14 +59,14 @@ jobs:
           outputs: type=image,"name=${{ env.GHCR_REPO }}",push-by-digest=false,name-canonical=true,push=true
           context: ./build
           file: ./build/Dockerfile
-          tags: "${{ env.GHCR_REPO }}:dev-${{ github.ref_name }}"
+          tags: "${{ env.GHCR_REPO }}:dev-${{ github.run_id }}"
           build-args: |
             version=${{ env.version }}
 
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.30.0
         with:
-          image-ref: "${{ env.GHCR_REPO }}:dev-${{ github.ref_name }}"
+          image-ref: "${{ env.GHCR_REPO }}:dev-${{ github.run_id }}"
           format: 'sarif'
           exit-code: 0
           severity: 'CRITICAL,HIGH'
