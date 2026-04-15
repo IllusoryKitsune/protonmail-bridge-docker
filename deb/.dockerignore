@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!PACKAGE
+!entrypoint.sh
+!gpgparams
+!install.sh

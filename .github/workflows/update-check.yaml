@@ -5,20 +5,37 @@ on:
     paths:
       - .github/workflows/update-check.yaml
       - update-check.py
+      - requirements.txt
   pull_request:
     paths:
       - .github/workflows/update-check.yaml
       - update-check.py
+      - requirements.txt
   schedule:
-  - cron: '0 0 * * *'  # runs everyday at midnight
+    - cron: '0 0 * * *'  # runs every day at midnight UTC
+  workflow_dispatch:
+
+# Third-party actions are pinned to commit SHAs (see build.yaml for rationale).
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-    - name: Checkout
-      uses: actions/checkout@master
-      with:
-        token: ${{ secrets.PERSONAL_TOKEN }}
-    - name: Check Update
-      run: python3 update-check.py ${{ github.event_name == 'pull_request' }}
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ secrets.PERSONAL_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: python3 -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Check Update
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 update-check.py ${{ github.event_name == 'pull_request' }}
