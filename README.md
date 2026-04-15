@@ -13,7 +13,7 @@ ghcr.io/illusorykitsune/protonmail-bridge-docker
 Two image types are produced:
 
 - `deb` — based on the official [.deb release](https://proton.me/mail/bridge). `amd64` only.
-- `build` — built from [Proton Bridge source](https://github.com/ProtonMail/proton-bridge). Supports `amd64`, `arm64`, `arm/v7`, and `riscv64`.
+- `build` — built from [Proton Bridge source](https://github.com/ProtonMail/proton-bridge). Supports `amd64`, `arm64`, and `riscv64`.
 
 | tag                | description                         |
 | ------------------ | ----------------------------------- |
