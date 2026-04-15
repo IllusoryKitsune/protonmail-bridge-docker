@@ -4,7 +4,7 @@ FROM debian:sid-slim AS build
 ARG version
 
 # Install dependencies
-RUN apt-get update && apt-get install -y golang build-essential libsecret-1-dev libfido2-dev libcbor-dev libssl-dev
+RUN apt-get update && apt-get install -y golang build-essential pkg-config libsecret-1-dev libfido2-dev libcbor-dev libssl-dev
 
 # Build
 ADD https://github.com/ProtonMail/proton-bridge.git#${version} /build/
@@ -17,9 +17,12 @@ LABEL maintainer="Simon Felding <sife@adm.ku.dk>"
 EXPOSE 25/tcp
 EXPOSE 143/tcp
 
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
+    CMD pgrep -f proton-bridge >/dev/null || exit 1
+
 # Install dependencies and protonmail bridge
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends socat pass libsecret-1-0 ca-certificates \
+    && apt-get install -y --no-install-recommends socat pass libsecret-1-0 libfido2-1 libcbor0.10 ca-certificates procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy bash scripts

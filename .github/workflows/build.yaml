@@ -14,7 +14,7 @@ on:
 
 env:
   GHCR_REPO: ghcr.io/illusorykitsune/protonmail-bridge-docker
-  PLATFORMS: linux/amd64,linux/arm64/v8,linux/arm/v7,linux/riscv64
+  PLATFORMS: linux/amd64,linux/arm64/v8,linux/riscv64
 
 jobs:
   test:
@@ -89,7 +89,6 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm64/v8
-          - linux/arm/v7
           - linux/riscv64
     steps:
       - name: Checkout
@@ -133,9 +132,6 @@ jobs:
           outputs: type=image,"name=${{ env.GHCR_REPO }}",push-by-digest=true,name-canonical=true,push=true
           context: ./build
           file: ./build/Dockerfile
-          tags: |
-            "${{ env.GHCR_REPO }}:build"
-            "${{ env.GHCR_REPO }}:${{ env.version }}-build"
           provenance: false
           sbom: false
           build-args: |
