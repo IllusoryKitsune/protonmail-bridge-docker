@@ -12,6 +12,15 @@ on:
       - build/*
   workflow_dispatch:
 
+# Third-party actions are pinned to commit SHAs (not tags) to mitigate the
+# class of supply-chain attack demonstrated by the March 2026 trivy-action
+# tag force-push compromise (GHSA-69fq-xp46-6x23). Dependabot refreshes these
+# SHAs via .github/dependabot.yml.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   GHCR_REPO: ghcr.io/illusorykitsune/protonmail-bridge-docker
   PLATFORMS: linux/amd64,linux/arm64/v8,linux/riscv64
@@ -23,37 +32,36 @@ jobs:
     permissions:
       contents: read
       packages: write
-      security-events: write
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set version
         id: version
-        run: echo "version=`cat VERSION`" >> $GITHUB_ENV
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_ENV"
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
             ${{ env.GHCR_REPO }}
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
         with:
           driver-opts: network=host
 
-      - name: Build and push by digest
+      - name: Build and push dev tag
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,"name=${{ env.GHCR_REPO }}",push-by-digest=false,name-canonical=true,push=true
@@ -62,24 +70,14 @@ jobs:
           tags: "${{ env.GHCR_REPO }}:dev-${{ github.run_id }}"
           build-args: |
             version=${{ env.version }}
-
-      - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: "${{ env.GHCR_REPO }}:dev-${{ github.run_id }}"
-          format: 'sarif'
-          exit-code: 0
-          severity: 'CRITICAL,HIGH'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan SARIF report
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master')
     permissions:
       contents: read
       packages: write
@@ -92,40 +90,40 @@ jobs:
           - linux/riscv64
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
 
       - name: Set version
         id: version
-        run: echo "version=`cat VERSION`" >> $GITHUB_ENV
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_ENV"
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
             ${{ env.GHCR_REPO }}
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
 
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -136,21 +134,22 @@ jobs:
           sbom: false
           build-args: |
             version=${{ env.version }}
+          cache-from: type=gha,scope=${{ env.PLATFORM_PAIR }}
+          cache-to: type=gha,mode=max,scope=${{ env.PLATFORM_PAIR }}
 
       - name: Export digest
         run: |
-          mkdir -p ${{ runner.temp }}/digests
+          mkdir -p "${{ runner.temp }}/digests"
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: digests-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
-
 
   merge:
     runs-on: ubuntu-latest
@@ -159,34 +158,36 @@ jobs:
     permissions:
       contents: read
       packages: write
-      security-events: write
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-*
           merge-multiple: true
 
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Set version
         id: version
-        run: echo "version=`cat VERSION`" >> $GITHUB_ENV
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_ENV"
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
         with:
           driver-opts: network=host
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
           images: |
             ${{ env.GHCR_REPO }}
@@ -199,19 +200,6 @@ jobs:
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
-
-      - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: "${{ env.GHCR_REPO }}:${{ env.version }}-build"
-          format: 'sarif'
-          exit-code: 0
-          severity: 'CRITICAL,HIGH'
-          output: 'trivy-results.sarif'
-      - name: Upload Trivy scan SARIF report
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
 
       - name: Inspect image
         run: |

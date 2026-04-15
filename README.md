@@ -64,9 +64,16 @@ A Helm chart by [@Eagleman7](https://github.com/Eagleman7) is available at [k8s-
 
 ## Build from source
 
+The `build` image needs the upstream release tag passed in as a build arg:
+
 ```
-cd build   # or: cd deb
-docker build .
+docker build --build-arg version="$(cat VERSION)" -t protonmail-bridge ./build
+```
+
+The `deb` image takes no build args:
+
+```
+docker build -t protonmail-bridge ./deb
 ```
 
 The `Dockerfile` and entrypoint scripts handle downloading, building and packaging. `buildx` can be used for multi-arch builds.

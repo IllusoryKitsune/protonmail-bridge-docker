@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Keep third-party GitHub Actions fresh. All actions are pinned to commit
+  # SHAs in the workflows; Dependabot updates both the SHA and the trailing
+  # `# vX.Y.Z` comment.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # Base images for both Dockerfiles. A new debian:sid-slim digest forces a
+  # rebuild, which is our primary CVE-mitigation path now that we don't run
+  # a third-party image scanner at CI time.
+  - package-ecosystem: docker
+    directory: /build
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /deb
+    schedule:
+      interval: weekly
+
+  # Python deps for update-check.py.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,0 +1,6 @@
+# Keep build context minimal. Only the files actually COPYed in the
+# Dockerfile need to be shipped to the builder.
+*
+!Dockerfile
+!entrypoint.sh
+!gpgparams

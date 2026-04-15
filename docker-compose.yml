@@ -1,14 +1,25 @@
-version: '2.1'
-
+# Compose v2 no longer requires a top-level `version:` key.
 services:
   protonmail-bridge:
-    image: ghcr.io/illusorykitsune/protonmail-bridge-docker
-    ports:
-      - 1025:25/tcp
-      - 1143:143/tcp
+    image: ghcr.io/illusorykitsune/protonmail-bridge-docker:latest
+    container_name: protonmail-bridge
     restart: unless-stopped
+    # On untrusted networks or publicly-routable hosts, prefer binding to
+    # localhost and fronting with a firewall / reverse-SMTP proxy:
+    #   - "127.0.0.1:1025:25/tcp"
+    #   - "127.0.0.1:1143:143/tcp"
+    ports:
+      - "1025:25/tcp"
+      - "1143:143/tcp"
     volumes:
       - protonmail:/root
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f proton-bridge >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 volumes:
   protonmail:
     name: protonmail
